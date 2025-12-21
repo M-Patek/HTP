@@ -1,3 +1,5 @@
+// COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
+
 mod core;
 mod topology;
 
