@@ -2,6 +2,7 @@
 
 mod core;
 mod topology;
+mod net; // 引入 net 以便 cargo check 能通过
 
 use crate::core::param::SystemParameters;
 use crate::core::primes::hash_to_prime;
@@ -25,20 +26,24 @@ fn main() {
             Err(e) => { eprintln!("⚠️  Skipping {}: {}", uid, e); continue; }
         };
         
+        // [FIX]: 真正的非交换初始化 (Non-commutative Evolution)
+        // 使用 Generator 而不是 Identity
+        let g = crate::core::algebra::ClassGroupElement::generator(&params.discriminant);
+        
         let tuple = AffineTuple {
             p_factor: p.clone(),
-            q_shift: crate::core::algebra::ClassGroupElement::identity(&params.discriminant), 
+            q_shift: g, 
         };
 
-        // [FIX]: Handle Collision Error
-        match tensor.insert_by_id(uid, tuple) {
-            Ok(_) => println!("[Ingest] User {} mapped...", uid),
+        match tensor.insert(uid, tuple) {
+            Ok(_) => println!("[Ingest] User {} mapped (Non-commutative).", uid),
             Err(e) => eprintln!("❌ Insert Failed: {}", e),
         }
     }
 
     println!("[Compute] Folding dimensions...");
-    // Fallback: Use Identity as placeholder for demo since we focused on service fixes
-    let global_root = crate::core::affine::AffineTuple::identity(&params.discriminant); 
-    println!("[Success] Global Root Placeholder: {:x}...", global_root.p_factor);
+    match tensor.calculate_global_root() {
+        Ok(root) => println!("[Success] Global Root: {:x}...", root.p_factor),
+        Err(e) => eprintln!("Calculation failed: {}", e),
+    }
 }
