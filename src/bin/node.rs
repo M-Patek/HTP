@@ -1,7 +1,7 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 
 use clap::Parser;
-use log::{info, warn};
+use log::{info, warn, error};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::net::SocketAddr;
@@ -17,8 +17,7 @@ struct Cli {
     #[arg(short, long, default_value = "127.0.0.1:4433")]
     bind: String,
 
-    // [SECURITY FIX]: Removed default_value. Seed is REQUIRED.
-    /// Random Seed for Trustless Setup (MUST be unique)
+    /// Random Seed for Trustless Setup (MUST be unique and high entropy)
     #[arg(short, long)]
     seed: String,
 
@@ -31,7 +30,14 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
     let cli = Cli::parse();
 
-    // [SECURITY WARNING]
+    // [SECURITY FIX]: Enforce Seed Strength
+    // 防止用户使用弱种子启动生产环境节点
+    if cli.seed.len() < 32 {
+        error!("❌ CRITICAL ERROR: Seed is too short! Must be at least 32 characters for security.");
+        error!("   Current length: {}. Please provide a high-entropy string.", cli.seed.len());
+        std::process::exit(1);
+    }
+
     if cli.seed == "block_891234" {
         warn!("⚠️  WARNING: You are using a known test seed. ASSETS ARE AT RISK.");
     }
@@ -39,8 +45,8 @@ async fn main() -> anyhow::Result<()> {
     info!("🚀 Initializing HTP Node (Secure Edition)...");
 
     // 1. Trustless Setup
-    // [SECURITY FIX]: Increased parameters to 2048-bit for production security.
     let start = std::time::Instant::now();
+    // 使用足够长的 seed 生成参数
     let params = SystemParameters::from_random_seed(cli.seed.as_bytes(), 2048);
     info!("✅ Trustless Setup Complete (2048-bit) in {:?}", start.elapsed());
 
@@ -54,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
 
     // 3. Start Networking
     let addr: SocketAddr = cli.bind.parse()?;
-    // Certificate generation handled inside bind_server
+    // Certificate generation/loading is handled inside bind_server with fallback
     let transport = QuicTransport::bind_server(addr, "cert.pem", "key.pem").await?;
     
     info!("📡 QUIC Transport listening on {}", addr);
