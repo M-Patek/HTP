@@ -69,10 +69,10 @@ $$
 $$
 
 ### 2.2 Derivation of Composition
-Let there be two consecutive transformations $\mathcal{A}_1 = (P_1, Q_1)$ and $\mathcal{A}_2 = (P_2, Q_2)$. We seek a single tuple $\mathcal{A}_{merge}$ such that:
+Let there be two consecutive transformations $\mathcal{A}\_1 = (P\_1, Q\_1)$ and $\mathcal{A}\_2 = (P\_2, Q\_2)$. We seek a single tuple $\mathcal{A}\_{\text{merge}}$ such that:
 
 $$
-\rho(\mathcal{A}_{merge}, S) = \rho(\mathcal{A}_2, \rho(\mathcal{A}_1, S))
+\rho(\mathcal{A}_{\text{merge}}, S) = \rho(\mathcal{A}_2, \rho(\mathcal{A}_1, S))
 $$
 
 **Proof:**
