@@ -1,4 +1,5 @@
-// src/bin/client.rs
+// COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
+
 use clap::{Parser, Subcommand};
 use log::{info, error};
 use htp_core::net::transport::QuicTransport;
