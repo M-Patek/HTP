@@ -5,7 +5,7 @@
 
 ## 📊 Executive Summary
 
-PHTP is designed to shift the verification bottleneck from linear scanning to logarithmic accumulation.
+HTP is designed to shift the verification bottleneck from linear scanning to logarithmic accumulation.
 
 | Metric | RSA Accumulator (Standard) | PHTP (Projected) | Speedup Factor |
 | :--- | :--- | :--- | :--- |
