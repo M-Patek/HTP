@@ -11,9 +11,11 @@ build:
 	@cargo build --release
 
 # 2. 运行服务端 (后台运行)
+# [SECURITY FIX]: 使用 openssl 生成随机种子，防止硬编码私钥泄漏 (Hardcoded Seed)
 run-node:
 	@echo "🚀 Starting Prover Node..."
-	@RUST_LOG=info ./target/release/htp-node --dim 4 --seed "M-Patek-Secret"
+	@echo "⚠️  Generating fresh secure seed for this session..."
+	@RUST_LOG=info ./target/release/htp-node --dim 4 --seed "$$(openssl rand -hex 32)"
 
 # 3. 运行客户端进行验证
 verify:
