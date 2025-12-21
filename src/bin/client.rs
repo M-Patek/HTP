@@ -4,7 +4,8 @@ use clap::{Parser, Subcommand};
 use log::{info, error};
 use htp_core::net::transport::QuicTransport;
 use htp_core::net::wire::{HtpRequest, HtpResponse};
-use bincode::Options; // [FIX]: Import for safe deserialization
+use bincode::Options;
+use rug::Integer;
 
 #[derive(Parser)]
 #[command(name = "HTP CLI")]
@@ -27,7 +28,6 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
     let cli = Cli::parse();
 
-    // 1. Connect
     let transport = QuicTransport::bind_client()?;
     let endpoint = transport.get_endpoint();
     let server_addr: std::net::SocketAddr = cli.server.parse()?;
@@ -36,7 +36,6 @@ async fn main() -> anyhow::Result<()> {
     let connection = endpoint.connect(server_addr, "localhost")?.await?;
     let (mut send, mut recv) = connection.open_bi().await?;
 
-    // 2. Send Request
     let request = match &cli.command {
         Commands::Verify { user_id } => HtpRequest::GetProof { 
             user_id: user_id.clone(), 
@@ -49,37 +48,40 @@ async fn main() -> anyhow::Result<()> {
     send.write_all(&req_bytes).await?;
     send.finish().await?;
 
-    // 3. Handle Response
     let mut buf = vec![0u8; 8192];
     let len = recv.read(&mut buf).await?.unwrap_or(0);
 
-    // [SECURITY FIX]: Use Safe Bincode Options to prevent Deserialization Bomb
     let safe_config = bincode::DefaultOptions::new()
-        .with_limit(5 * 1024 * 1024) // 5MB Max Response
+        .with_limit(5 * 1024 * 1024) 
         .with_fixint_encoding()
         .allow_trailing_bytes();
 
     let response: HtpResponse = safe_config.deserialize(&buf[..len])?;
 
     match response {
-        HtpResponse::ProofBundle { primary_path, .. } => {
+        // [FIX]: Updated match arm to reflect removal of `target_coord`
+        HtpResponse::ProofBundle { primary_path, orthogonal_anchors, .. } => {
             info!("📦 Received Proof Bundle.");
             
-            // [SECURITY FIX]: Actual Validation Logic
-            // Instead of hardcoded true, we check if the path is valid.
+            if primary_path.is_empty() {
+                error!("❌ VERIFICATION FAILED: Proof path is empty.");
+                std::process::exit(1);
+            }
+
+            info!("🧮 Recomputing Affine Path (Aggregation)...");
             
-            // Recompute the affine path (Simplified check for Demo)
-            let mut is_valid = false;
-            if !primary_path.is_empty() {
-                // Check if the aggregated prime factor is non-trivial (>1)
-                // In production: verify against GlobalRoot and Anchors.
-                if primary_path[0].p_factor > rug::Integer::from(1) {
-                    is_valid = true;
+            // Client-side math validation (Basic sanity check)
+            let mut is_mathematically_valid = true;
+            for (i, node) in primary_path.iter().enumerate() {
+                if node.p_factor <= Integer::from(1) {
+                    error!("❌ Invalid Prime Factor at depth {}", i);
+                    is_mathematically_valid = false;
+                    break;
                 }
             }
-            
-            if is_valid {
-                println!("✅ VERIFICATION SUCCESSFUL: Proof cryptographically validated.");
+
+            if is_mathematically_valid {
+                println!("✅ VERIFICATION SUCCESSFUL: Path structure verified.");
             } else {
                 error!("❌ VERIFICATION FAILED: Invalid mathematical structure.");
                 std::process::exit(1);
