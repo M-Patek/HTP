@@ -1,9 +1,7 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 
 use serde::{Serialize, Deserialize};
-use rug::Integer;
 use crate::core::affine::AffineTuple;
-use crate::topology::tensor::Coordinate;
 
 pub const PROTOCOL_VERSION: u16 = 1;
 
@@ -22,8 +20,7 @@ pub enum HtpResponse {
         request_id: u64,
         
         // [SECURITY FIX]: Privacy Enhancement
-        // Removed `target_coord` to prevent leaking user position in the tensor.
-        // Client derives this from their own ID + Public Parameters.
+        // Removed `target_coord` to prevent leaking user position/existence in specific buckets.
         
         primary_path: Vec<AffineTuple>,
         orthogonal_anchors: Vec<AffineTuple>,
