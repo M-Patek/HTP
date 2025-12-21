@@ -5,15 +5,15 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::net::SocketAddr;
 
-use phtp_core::core::param::SystemParameters;
-use phtp_core::topology::tensor::HyperTensor;
-use phtp_core::net::transport::QuicTransport;
-use phtp_core::net::service::run_prover_service;
+use htp_core::core::param::SystemParameters;
+use htp_core::topology::tensor::HyperTensor;
+use htp_core::net::transport::QuicTransport;
+use htp_core::net::service::run_prover_service;
 
 #[derive(Parser)]
-#[command(name = "PHTP Node")]
+#[command(name = "HTP Node")]
 #[command(version = "1.0")]
-#[command(about = "Phoenix Hyper-Tensor Protocol - Prover Node", long_about = None)]
+#[command(about = "Hyper-Tensor Protocol - Prover Node", long_about = None)]
 struct Cli {
     /// Listening Address
     #[arg(short, long, default_value = "127.0.0.1:4433")]
@@ -35,13 +35,13 @@ async fn main() -> anyhow::Result<()> {
 
     println!(r#"
     ____  __  ____________ 
-   / __ \/ / / /_  __/ __ \   PHOENIX HYPER-TENSOR PROTOCOL
+   / __ \/ / / /_  __/ __ \   HYPER-TENSOR PROTOCOL
   / /_/ / /_/ / / / / /_/ /   (C) 2025 M-Patek Research
  / ____/ __  / / / / ____/    Target: High-Frequency Membership
 /_/   /_/ /_/ /_/ /_/         Status: Production Ready
     "#);
 
-    info!("🚀 Initializing PHTP Node...");
+    info!("🚀 Initializing HTP Node...");
 
     // 1. Trustless Setup
     let start = std::time::Instant::now();
