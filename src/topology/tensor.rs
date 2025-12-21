@@ -31,7 +31,6 @@ impl HyperTensor {
         let mut coord = Vec::with_capacity(self.dimensions);
         let mut temp = numeric_id;
         let l = self.side_length as u64;
-
         for _ in 0..self.dimensions {
             coord.push((temp % l) as usize);
             temp /= l;
@@ -42,13 +41,11 @@ impl HyperTensor {
     pub fn map_id_to_coord_hash(&self, user_id: &str) -> Coordinate {
         let mut hasher = blake3::Hasher::new();
         hasher.update(user_id.as_bytes());
-        hasher.update(b":htp:coord:"); // Domain separation
+        hasher.update(b":htp:coord:"); 
         let hash_output = hasher.finalize();
-        
         let mut bytes = [0u8; 8];
         bytes.copy_from_slice(&hash_output.as_bytes()[0..8]);
         let id_hash_u64 = u64::from_le_bytes(bytes);
-        
         self.map_id_to_coord(id_hash_u64)
     }
     
@@ -65,18 +62,11 @@ impl HyperTensor {
         anchors
     }
 
-    /// [CRITICAL FIX]: Prevent Pigeonhole Overwrite (Collision Safety)
-    /// 修复了“鸽巢”数据覆盖漏洞。
-    /// 现在如果坐标已被占用，操作将失败，而不是静默覆盖数据。
     pub fn insert(&mut self, user_id: u64, tuple: AffineTuple) -> Result<(), String> {
         let coord = self.map_id_to_coord(user_id);
-        
         if self.data.contains_key(&coord) {
-             // 简单的拒绝策略 (Fail-Safe)
-             // 生产环境中应使用链式存储 (Chaining) 或开放寻址 (Open Addressing)
-             return Err(format!("💥 Collision detected at {:?}. Write rejected to prevent data loss.", coord));
+             return Err(format!("💥 Collision detected at {:?}. Write rejected.", coord));
         }
-
         self.data.insert(coord, tuple);
         self.cached_root = None;
         Ok(())
@@ -84,11 +74,9 @@ impl HyperTensor {
     
     pub fn insert_by_id(&mut self, user_id: &str, tuple: AffineTuple) -> Result<(), String> {
         let coord = self.map_id_to_coord_hash(user_id);
-        
         if self.data.contains_key(&coord) {
              return Err(format!("💥 Collision detected for User '{}' at {:?}.", user_id, coord));
         }
-
         self.data.insert(coord, tuple);
         self.cached_root = None;
         Ok(())
