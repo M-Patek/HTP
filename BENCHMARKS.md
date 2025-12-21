@@ -1,6 +1,6 @@
 # Performance Projections & Theoretical Analysis
 
-> **⚠️ NOTE:** The following performance figures represent **theoretical maximums** based on the asymptotic complexity of the Hyper-Tensor architecture ($O(\log N)$). 
+> **⚠️ NOTE:** The following performance figures represent **theoretical maximums** based on the asymptotic complexity of the Hyper-Tensor architecture ( $O(\log N)$ ). 
 > Actual throughput depends on hardware acceleration (AVX-512) and network latency.
 
 ## 📊 Executive Summary
