@@ -9,12 +9,18 @@ pub struct SystemParameters {
 
 impl SystemParameters {
     /// 运行时生成：根据随机种子生成判别式 Delta
-    /// 逻辑：Hash(seed) -> M -> M must be prime and M = 3 mod 4 -> Delta = -M
+    /// [SECURITY FIX]: Added loop limit to prevent infinite hang during setup.
     pub fn from_random_seed(seed_bytes: &[u8], bit_size: u32) -> Self {
         println!("[System] Generating Trustless Parameters from seed...");
         
         let mut attempt = 0;
+        let max_attempts = 10_000; // 防止无限死循环
+
         loop {
+            if attempt > max_attempts {
+                panic!("❌ Failed to generate System Parameters. Seed entropy insufficient or bad luck.");
+            }
+
             // 1. 确定性地不断改变 Hash 输入 (Nonce)
             let mut hasher = Hasher::new();
             hasher.update(seed_bytes);
@@ -28,18 +34,14 @@ impl SystemParameters {
             candidate.set_bit(bit_size - 1, true);
             
             // 3. 强制 M = 3 mod 4 (为了让 Delta = 1 mod 4)
-            // 如果 candidate % 4 != 3，就调整它
             let rem = candidate.mod_u(4);
             if rem != 3 {
-                // 简单的调整策略：加减偏移量，或者直接跳过
                 attempt += 1;
                 continue;
             }
 
             // 4. 素性测试 (Miller-Rabin)
-            // rug 库内部实现了高效的概率性素数测试
             if candidate.is_probably_prime(30) != rug::integer::IsPrime::No {
-                // 找到 M 了！ Delta = -M
                 let discriminant = -candidate;
                 println!("[System] Found Discriminant: {}", discriminant);
                 return SystemParameters { discriminant };
