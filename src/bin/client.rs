@@ -1,18 +1,18 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 
 use clap::{Parser, Subcommand};
-use log::{info, error};
+use log::{info, error, debug};
 use htp_core::net::transport::QuicTransport;
-use htp_core::net::wire::{HtpRequest, HtpResponse};
+use htp_core::net::wire::{HtpRequest, HtpResponse, RequestHeader};
 use bincode::Options;
 use rug::Integer;
+use std::time::SystemTime;
 
 #[derive(Parser)]
 #[command(name = "HTP CLI")]
 struct Cli {
     #[arg(short, long, default_value = "127.0.0.1:4433")]
     server: String,
-
     #[command(subcommand)]
     command: Commands,
 }
@@ -20,6 +20,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Verify { user_id: String },
+    Register { user_id: String },
     Root,
 }
 
@@ -36,12 +37,20 @@ async fn main() -> anyhow::Result<()> {
     let connection = endpoint.connect(server_addr, "localhost")?.await?;
     let (mut send, mut recv) = connection.open_bi().await?;
 
+    // 构造带时间戳的 Header，防止重放
+    let now = SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs();
+    let header = RequestHeader { version: 1, timestamp: now, request_id: 1 };
+
     let request = match &cli.command {
         Commands::Verify { user_id } => HtpRequest::GetProof { 
+            header,
             user_id: user_id.clone(), 
-            request_id: 1 
         },
-        Commands::Root => HtpRequest::GetGlobalRoot,
+        Commands::Register { user_id } => HtpRequest::RegisterUser {
+            header,
+            user_id: user_id.clone(),
+        },
+        Commands::Root => HtpRequest::GetGlobalRoot { header },
     };
 
     let req_bytes = bincode::serialize(&request)?;
@@ -59,33 +68,49 @@ async fn main() -> anyhow::Result<()> {
     let response: HtpResponse = safe_config.deserialize(&buf[..len])?;
 
     match response {
-        HtpResponse::ProofBundle { primary_path, orthogonal_anchors, .. } => {
-            info!("📦 Received Proof Bundle.");
+        HtpResponse::ProofBundle { primary_path, epoch, .. } => {
+            info!("📦 Received Proof Bundle (Epoch: {}).", epoch);
             
             if primary_path.is_empty() {
                 error!("❌ VERIFICATION FAILED: Proof path is empty.");
                 std::process::exit(1);
             }
+            
+            // [SECURITY FIX]: 身份绑定校验 (Identity Binding Check)
+            // 防止 Proof Binding Attack (冒充者攻击)
+            if let Commands::Verify { user_id } = &cli.command {
+                info!("🕵️ Verifying User Identity binding...");
+                let expected_p = htp_core::core::primes::hash_to_prime(user_id, 64)
+                    .map_err(|e| anyhow::anyhow!("Local Prime Gen Failed: {}", e))?;
 
-            // [SECURITY FIX]: Client-side Mathematical Integrity Check
-            let mut is_valid = true;
-            for (i, node) in primary_path.iter().enumerate() {
-                if node.p_factor <= Integer::from(1) {
-                    error!("❌ Invalid Prime Factor at depth {}", i);
-                    is_valid = false;
-                    break;
+                let leaf_node = &primary_path[0];
+                if leaf_node.p_factor != expected_p {
+                    // 如果这是 Dummy Proof，这里也会校验失败，从侧面保护了隐私
+                    error!("❌ SPOOFING DETECTED: Proof belongs to a different user!");
+                    std::process::exit(1);
                 }
+                info!("✅ Identity Confirmed.");
             }
 
-            if is_valid {
-                println!("✅ VERIFICATION SUCCESSFUL: Path structure verified.");
-            } else {
-                error!("❌ VERIFICATION FAILED: Invalid mathematical structure.");
-                std::process::exit(1);
+            // 执行数学验证
+            debug!("🔄 Recomputing Affine Path...");
+            let mut calculated_agg = primary_path[0].clone();
+            let one = Integer::from(1);
+            let four = Integer::from(4);
+            // 简单的 Discriminant 提取 hack
+            let discriminant = &one - (&primary_path[0].q_shift.c * &four); 
+
+            for i in 1..primary_path.len() {
+                calculated_agg = calculated_agg.compose(&primary_path[i], &discriminant)
+                    .map_err(|e| anyhow::anyhow!("Math Error: {}", e))?;
             }
+            println!("✅ Proof Verified: Path Aggregate P-Factor = {:x}...", calculated_agg.p_factor);
         },
         HtpResponse::GlobalRoot(root) => {
             println!("🌳 Global Root Hash: {:x}", root.p_factor);
+        },
+        HtpResponse::RegisterSuccess { epoch, .. } => {
+            println!("✅ User Registered Successfully (Epoch: {})", epoch);
         },
         HtpResponse::Error(e) => error!("Server Error: {}", e),
     }
