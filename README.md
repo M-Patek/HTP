@@ -69,6 +69,7 @@ $$
 ## ⚡ Performance Benchmarks
 
 *Hardware: AMD EPYC 7763, Single Core*
+> Data represents theoretical upper bounds derived from complexity analysis and prototype simulation on specified hardware; final production metrics are subject to empirical validation.
 
 | Metric | RSA Accumulator | HYPER-TENSOR PROTOCOL (HTP) | Improvement |
 | :--- | :--- | :--- | :--- |
