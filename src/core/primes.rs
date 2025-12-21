@@ -4,11 +4,12 @@ use rug::Integer;
 use blake3::Hasher;
 
 /// 运行时生成：将任意用户 ID 转换为一个唯一的素数
-/// 使用 "Nonce-based Hash-and-Test" 算法
+/// [SECURITY FIX]: Added loop limit to prevent infinite loops.
 pub fn hash_to_prime(user_id: &str, bit_size: u32) -> Integer {
     let mut nonce = 0u64;
+    let max_attempts = 10_000; // Safety Limit against entropy exhaustion
     
-    loop {
+    while nonce < max_attempts {
         let mut hasher = Hasher::new();
         hasher.update(user_id.as_bytes());
         hasher.update(&nonce.to_le_bytes());
@@ -20,8 +21,7 @@ pub fn hash_to_prime(user_id: &str, bit_size: u32) -> Integer {
         candidate.set_bit(bit_size - 1, true);
         candidate.set_bit(0, true);
 
-        // 1. 快速筛选 (Small Prime Sieve) - 模拟
-        // 在实际代码中，这里会先尝试除以 3, 5, 7, 11... 如果能整除直接 continue
+        // 1. 快速筛选 (Small Prime Sieve)
         if candidate.mod_u(3) == 0 || candidate.mod_u(5) == 0 {
             nonce += 1;
             continue;
@@ -29,10 +29,12 @@ pub fn hash_to_prime(user_id: &str, bit_size: u32) -> Integer {
 
         // 2. 强素数测试
         if candidate.is_probably_prime(25) != rug::integer::IsPrime::No {
-            // 生成成功！
             return candidate;
         }
 
         nonce += 1;
     }
+    
+    // [Fix]: Panic safely instead of looping forever
+    panic!("❌ Failed to generate prime for '{}'. Entropy pool exhausted.", user_id);
 }
