@@ -5,7 +5,7 @@ This document provides the formal mathematical derivations for the HYPER-TENSOR 
 
 ---
 
-## 1. The Non-Commutative Evolution (非交换演化)
+## 1. The Non-Commutative Evolution
 
 ### 1.1 Problem Definition
 In a standard RSA accumulator, operations are commutative ($x^{ab} = x^{ba}$). HTP introduces a depth-dependent noise factor $G^{H(t)}$ to enforce order sensitivity.
@@ -21,7 +21,7 @@ Where:
 * $h_t$: Hash of the spacetime depth $H(t)$.
 * $G$: Generator of the class group.
 
-### 1.2 Recursive Expansion (递归展开)
+### 1.2 Recursive Expansion
 We aim to express the state $S_n$ as a function of an arbitrary previous state $S_{k-1}$ (where $k \le n$).
 
 **Base Step (k):**
@@ -57,7 +57,7 @@ The verification equation becomes checking if the state $S_{k-1}$, when transfor
 
 ---
 
-## 2. Affine Composition Law (仿射合成法则)
+## 2. Affine Composition Law
 
 To enable $O(\log N)$ verification and parallel construction (Segment Trees), we must prove that our affine transformations form a **Monoid** under a specific composition law.
 
@@ -91,7 +91,7 @@ $$
 \mathcal{A}_1 \oplus \mathcal{A}_2 = (P_1 \cdot P_2, \quad Q_1^{P_2} \cdot Q_2)
 $$
 
-### 2.3 Proof of Associativity (结合律证明)
+### 2.3 Proof of Associativity
 For a Segment Tree to work, $(\mathcal{A}_1 \oplus \mathcal{A}_2) \oplus \mathcal{A}_3$ must equal $\mathcal{A}_1 \oplus (\mathcal{A}_2 \oplus \mathcal{A}_3)$.
 
 **Left Side:** $(\mathcal{A}_1 \oplus \mathcal{A}_2) \oplus \mathcal{A}_3$
@@ -118,7 +118,7 @@ $$
 
 ---
 
-## 3. Hyper-Tensor Folding (超张量折叠)
+## 3. Hyper-Tensor Folding
 
 ### 3.1 Tensor Structure
 Let $\mathcal{T}$ be a tensor of dimension $d$ with side length $L$. Each element at coordinate vector $\vec{v} = (v_1, \dots, v_d)$ contains an affine tuple $\mathcal{A}_{\vec{v}}$.
@@ -137,7 +137,7 @@ $$
 \mathcal{R} = \text{Fold}_{v_d} \left( \dots \text{Fold}_{v_2} \left( \text{Fold}_{v_1}(\mathcal{T}) \right) \dots \right)
 $$
 
-### 3.4 Orthogonal Verification (正交验证)
+### 3.4 Orthogonal Verification
 Although the affine composition itself is non-commutative, the dimensional folding order is commutative regarding the final scalar result, provided the topology is static:
 
 $$
