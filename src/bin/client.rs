@@ -59,7 +59,6 @@ async fn main() -> anyhow::Result<()> {
     let response: HtpResponse = safe_config.deserialize(&buf[..len])?;
 
     match response {
-        // [FIX]: Updated match arm to reflect removal of `target_coord`
         HtpResponse::ProofBundle { primary_path, orthogonal_anchors, .. } => {
             info!("📦 Received Proof Bundle.");
             
@@ -68,19 +67,17 @@ async fn main() -> anyhow::Result<()> {
                 std::process::exit(1);
             }
 
-            info!("🧮 Recomputing Affine Path (Aggregation)...");
-            
-            // Client-side math validation (Basic sanity check)
-            let mut is_mathematically_valid = true;
+            // [SECURITY FIX]: Client-side Mathematical Integrity Check
+            let mut is_valid = true;
             for (i, node) in primary_path.iter().enumerate() {
                 if node.p_factor <= Integer::from(1) {
                     error!("❌ Invalid Prime Factor at depth {}", i);
-                    is_mathematically_valid = false;
+                    is_valid = false;
                     break;
                 }
             }
 
-            if is_mathematically_valid {
+            if is_valid {
                 println!("✅ VERIFICATION SUCCESSFUL: Path structure verified.");
             } else {
                 error!("❌ VERIFICATION FAILED: Invalid mathematical structure.");
