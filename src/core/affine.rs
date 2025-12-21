@@ -3,8 +3,7 @@
 use super::algebra::ClassGroupElement;
 use rug::Integer;
 
-/// The Affine Tuple A = (P, Q).
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)] 
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct AffineTuple {
     pub p_factor: Integer,      
     pub q_shift: ClassGroupElement, 
@@ -18,20 +17,18 @@ impl AffineTuple {
         }
     }
 
-    /// [SECURITY FIX]: Return Result to prevent Crash-on-Error
+    /// [SECURITY FIX]: Return Result, Check Limits
     pub fn compose(&self, other: &Self, discriminant: &Integer) -> Result<Self, String> {
-        // [SECURITY FIX]: Resource Exhaustion Protection
+        // [SECURITY FIX]: Resource Exhaustion / OOM Protection
+        // Check if P-factor grows too large (e.g. > 100MB representation)
         let p_bits = self.p_factor.significant_bits() + other.p_factor.significant_bits();
         if p_bits > 1024 * 1024 * 800 { 
-             // [FIX]: Return error instead of panic
              return Err("❌ Security Halt: Affine P-Factor exceeded safety limit (State Bloat Detected).".to_string());
         }
 
-        // 1. New P = P1 * P2
         let new_p = Integer::from(&self.p_factor * &other.p_factor);
 
-        // 2. New Q = (Q1 ^ P2) * Q2
-        // Propagate errors from underlying algebra
+        // Propagate math errors
         let q1_pow_p2 = self.q_shift.pow(&other.p_factor, discriminant)?;
         let new_q = q1_pow_p2.compose(&other.q_shift, discriminant)?;
 
