@@ -1,7 +1,7 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 
 use clap::Parser;
-use log::{info, warn, error};
+use log::{info, error};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::net::SocketAddr;
@@ -29,30 +29,36 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
     let cli = Cli::parse();
 
-    // [SECURITY FIX]: Enforce Seed Strength
-    if cli.seed.len() < 32 {
-        error!("❌ CRITICAL ERROR: Seed is too short! Must be >32 chars.");
+    // [SECURITY FIX]: 输入参数校验，防止零维黑洞 (Zero-Dimension Singularity)
+    if cli.dim == 0 || cli.dim > 20 {
+        error!("❌ Invalid dimension. Must be between 1 and 20.");
         std::process::exit(1);
-    }
-    if cli.seed == "block_891234" {
-        warn!("⚠️  WARNING: Using known test seed.");
     }
 
     info!("🚀 Initializing HTP Node (Secure Edition)...");
 
-    let start = std::time::Instant::now();
-    let params = SystemParameters::from_random_seed(cli.seed.as_bytes(), 2048);
-    info!("✅ Trustless Setup Complete in {:?}", start.elapsed());
-
-    let tensor = Arc::new(RwLock::new(HyperTensor::new(
-        cli.dim, 
-        100,
-        params.discriminant
-    )));
-    info!("🧊 Hyper-Tensor ({}D) Allocated.", cli.dim);
+    // [FIX]: 健忘节点修复 - 启用持久化加载
+    let db_path = "htp_tensor.db";
+    let tensor = if std::path::Path::new(db_path).exists() {
+        info!("💾 Found existing database. Loading...");
+        match HyperTensor::load_from_disk(db_path) {
+            Ok(t) => {
+                info!("✅ Database loaded successfully.");
+                Arc::new(RwLock::new(t))
+            },
+            Err(e) => {
+                error!("❌ Failed to load database: {}. Starting fresh.", e);
+                let params = SystemParameters::from_random_seed(cli.seed.as_bytes(), 2048);
+                Arc::new(RwLock::new(HyperTensor::new(cli.dim, 100, params.discriminant)))
+            }
+        }
+    } else {
+        info!("✨ Creating new Hyper-Tensor.");
+        let params = SystemParameters::from_random_seed(cli.seed.as_bytes(), 2048);
+        Arc::new(RwLock::new(HyperTensor::new(cli.dim, 100, params.discriminant)))
+    };
 
     let addr: SocketAddr = cli.bind.parse()?;
-    // [FIX]: Cert loading with fallback
     let transport = QuicTransport::bind_server(addr, "cert.pem", "key.pem").await?;
     
     info!("📡 QUIC Transport listening on {}", addr);
