@@ -1,3 +1,5 @@
+// COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
+
 // build.rs
 fn main() {
     // [Optimization] Enable native CPU instructions (AVX2/AVX512)
