@@ -1,25 +1,21 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
-//
-// MODULE: Transport Layer (QUIC)
-// DESCRIPTION: Asynchronous, multiplexed transport over UDP.
-// SECURITY: TLS 1.3 enforced by default via rustls.
 
 use std::sync::Arc;
 use quinn::{Endpoint, ServerConfig, ClientConfig};
 use std::net::SocketAddr;
 use std::error::Error;
+use rcgen::generate_simple_self_signed; // [FIX]: Added for cert generation
 
-/// The HTP Transport Engine.
-/// Handles connection pooling and stream multiplexing.
 pub struct QuicTransport {
     endpoint: Endpoint,
 }
 
 impl QuicTransport {
-    /// Starts a Prover Node (Server) listening on a specific port.
     pub async fn bind_server(addr: SocketAddr, cert_path: &str, key_path: &str) -> Result<Self, Box<dyn Error>> {
-        // [Showcase Detail]: Loading TLS certificates for QUIC
+        // [FIX]: Safe certificate loading (Generates ephemeral cert if missing)
+        // Prevents Panic on startup.
         let (cert, key) = Self::load_certs(cert_path, key_path)?;
+        
         let server_crypto = rustls::ServerConfig::builder()
             .with_safe_defaults()
             .with_no_client_auth()
@@ -27,10 +23,9 @@ impl QuicTransport {
             
         let mut server_config = ServerConfig::with_crypto(Arc::new(server_crypto));
         
-        // [Optimization]: Tuning transport parameters for high throughput accumulator data
         let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
-        transport_config.max_concurrent_uni_streams(0_u8.into()); // We only use bi-directional
-        transport_config.max_concurrent_bidi_streams(1024_u8.into()); // High concurrency
+        transport_config.max_concurrent_uni_streams(0_u8.into()); 
+        transport_config.max_concurrent_bidi_streams(1024_u8.into());
         
         let endpoint = Endpoint::server(server_config, addr)?;
         println!("[Net] Prover Service listening on QUIC {}", addr);
@@ -38,7 +33,6 @@ impl QuicTransport {
         Ok(Self { endpoint })
     }
 
-    /// Starts a Verifier Node (Client).
     pub fn bind_client() -> Result<Self, Box<dyn Error>> {
         let mut endpoint = Endpoint::client("0.0.0.0:0".parse().unwrap())?;
         let client_crypto = rustls::ClientConfig::builder()
@@ -51,10 +45,26 @@ impl QuicTransport {
         Ok(Self { endpoint })
     }
     
-    // ... Internal helper: load_certs ...
-    fn load_certs(cert: &str, key: &str) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey), Box<dyn Error>> {
-        // Implementation redacted for showcase brevity
-        Ok((vec![], rustls::PrivateKey(vec![])))
+    // [FIX]: Implementation of ephemeral cert generation
+    fn load_certs(cert_path: &str, _key_path: &str) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey), Box<dyn Error>> {
+        // If file doesn't exist, generate in-memory
+        if std::fs::metadata(cert_path).is_err() {
+            println!("⚠️  Certificate file not found. Generating ephemeral self-signed cert...");
+            
+            let subject_alt_names = vec!["localhost".to_string(), "127.0.0.1".to_string()];
+            let cert = generate_simple_self_signed(subject_alt_names)?;
+            
+            let cert_der = cert.serialize_der()?;
+            let key_der = cert.serialize_private_key_der();
+            
+            return Ok((
+                vec![rustls::Certificate(cert_der)],
+                rustls::PrivateKey(key_der),
+            ));
+        }
+        
+        // Original logic would go here...
+        Err("File loading not implemented in this demo, used fallback.".into())
     }
 
     pub fn get_endpoint(&self) -> &Endpoint {
