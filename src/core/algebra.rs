@@ -1,10 +1,7 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
-// 
-// ALGORITHM: Class Group Arithmetic (Gauss Composition & Reduction)
 
 use rug::{Integer, ops::Pow};
 use serde::{Serialize, Deserialize};
-use std::cmp::Ordering;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClassGroupElement {
@@ -22,23 +19,21 @@ impl ClassGroupElement {
     }
 
     /// [SECURITY FIX]: Return Result instead of Panic
-    /// 现在函数签名返回 Result，防止数学错误导致进程崩溃。
     pub fn compose(&self, other: &Self, discriminant: &Integer) -> Result<Self, String> {
         let (a1, b1, _c1) = (&self.a, &self.b, &self.c);
         let (a2, b2, _c2) = (&other.a, &other.b, &other.c);
 
         let s = (b1 + b2) >> 1; 
         
+        // [ALGO FIX]: Use Binary Extended GCD
+        // Mitigates timing side-channels compared to standard Euclidean.
         let (d, y1, _y2) = Self::binary_xgcd(a1, a2);
         
         if d != Integer::from(1) {
-            // [FIX]: Graceful Error Return
-            return Err(format!("Math Error: Composition of non-coprime forms (d={}). Potential parameter attack.", d));
+            return Err(format!("Math Error: Composition of non-coprime forms (d={}).", d));
         }
         
-        // Standard Gauss Composition (d=1)
         let a3 = a1.clone() * a2;
-        
         let mut b3 = b2.clone();
         let term = &s - b2;
         let offset = a2.clone() * &y1 * &term;
@@ -60,15 +55,15 @@ impl ClassGroupElement {
         let bits = exp.to_string_radix(2); 
 
         for c in bits.chars() {
-            res = res.square(discriminant)?; // Propagate error
+            res = res.square(discriminant)?;
             if c == '1' {
-                res = res.compose(&base, discriminant)?; // Propagate error
+                res = res.compose(&base, discriminant)?;
             }
         }
         Ok(res)
     }
 
-    // --- Internal Helpers ---
+    // [ALGO FIX]: Binary Extended GCD (Less data-dependent than Euclidean)
     fn binary_xgcd(u_in: &Integer, v_in: &Integer) -> (Integer, Integer, Integer) {
         let mut u = u_in.clone();
         let mut v = v_in.clone();
