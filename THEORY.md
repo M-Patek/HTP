@@ -1,14 +1,14 @@
-# Hyper-Tensor Protocol: Theoretical Proofs
+# HYPER-TENSOR PROTOCOL (HTP): Theoretical Proofs
 
 ## Abstract
-This document provides the formal mathematical derivations for the Phoenix Hyper-Tensor Protocol (PHTP). It proves the correctness of the non-commutative affine evolution, the associativity of the composition law (enabling parallel segment trees), and the recursive structure of the hyper-tensor folding mechanism.
+This document provides the formal mathematical derivations for the HYPER-TENSOR PROTOCOL (HTP). It proves the correctness of the non-commutative affine evolution, the associativity of the composition law (enabling parallel segment trees), and the recursive structure of the hyper-tensor folding mechanism.
 
 ---
 
 ## 1. The Non-Commutative Evolution (非交换演化)
 
 ### 1.1 Problem Definition
-In a standard RSA accumulator, operations are commutative ($x^{ab} = x^{ba}$). PHTP introduces a depth-dependent noise factor $G^{H(t)}$ to enforce order sensitivity.
+In a standard RSA accumulator, operations are commutative ($x^{ab} = x^{ba}$). HTP introduces a depth-dependent noise factor $G^{H(t)}$ to enforce order sensitivity.
 
 Let $S_t$ be the state at step $t$. The state transition is defined as:
 $$S_t = \mathcal{F}(S_{t-1}, P_t, h_t) = S_{t-1}^{P_t} \cdot G^{h_t} \pmod \Delta$$
@@ -104,7 +104,7 @@ $$\text{Fold}_y(\text{Fold}_x(\mathcal{T})) \equiv \text{Fold}_x(\text{Fold}_y(\
 ## 4. Security Reductions
 
 ### 4.1 Hardness Assumption
-The security of PHTP relies on the **Hidden Order Assumption** in Class Groups. It is computationally infeasible to find the order $ord(G)$ of the class group $Cl(\Delta)$.
+The security of HTP relies on the **Hidden Order Assumption** in Class Groups. It is computationally infeasible to find the order $ord(G)$ of the class group $Cl(\Delta)$.
 
 ### 4.2 Soundness of Membership
 For an adversary to forge a membership proof $(W', R')$ for a non-member $P^*$ such that $(W')^{P^*} \cdot R' \equiv T$, they effectively need to solve the **Root Problem** in the group. Given the Adaptive Root Assumption holds, the probability of forgery is negligible.
