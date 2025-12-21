@@ -3,13 +3,15 @@
 use rug::Integer;
 use blake3::Hasher;
 
-/// [SECURITY FIX]: Returns Result instead of Panic
 pub fn hash_to_prime(user_id: &str, bit_size: u32) -> Result<Integer, String> {
     let mut nonce = 0u64;
-    let max_attempts = 10_000; // DoS Protection (Limit CPU usage)
+    // [SECURITY FIX]: 降低尝试次数，防止 素数搜索 CPU DoS
+    let max_attempts = 500; 
     
     while nonce < max_attempts {
         let mut hasher = Hasher::new();
+        // [SECURITY FIX]: 增加长度前缀，防止 Canonicalization (哈希拼接) 攻击
+        hasher.update(&(user_id.len() as u64).to_le_bytes());
         hasher.update(user_id.as_bytes());
         hasher.update(&nonce.to_le_bytes());
         let hash = hasher.finalize();
@@ -30,5 +32,5 @@ pub fn hash_to_prime(user_id: &str, bit_size: u32) -> Result<Integer, String> {
         nonce += 1;
     }
     
-    Err(format!("❌ Failed to generate prime for '{}' after {} attempts.", user_id, max_attempts))
+    Err(format!("❌ Failed to generate prime for user after {} attempts.", max_attempts))
 }
