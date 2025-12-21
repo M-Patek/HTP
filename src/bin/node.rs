@@ -34,11 +34,11 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     println!(r#"
-    ____  __  ____________ 
-   / __ \/ / / /_  __/ __ \   HYPER-TENSOR PROTOCOL
-  / /_/ / /_/ / / / / /_/ /   (C) 2025 M-Patek Research
- / ____/ __  / / / / ____/    Target: High-Frequency Membership
-/_/   /_/ /_/ /_/ /_/         Status: Production Ready
+    __  ____________ 
+   / / / /_  __/ __ \   HYPER-TENSOR PROTOCOL
+  / /_/ / / / / /_/ /   (C) 2025 M-Patek Research
+ / __  / / / / ____/    Target: High-Frequency Membership
+/_/ /_/ /_/ /_/         Status: Production Ready
     "#);
 
     info!("🚀 Initializing HTP Node...");
