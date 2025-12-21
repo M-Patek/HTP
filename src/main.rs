@@ -15,17 +15,14 @@ fn main() {
     let params = SystemParameters::from_random_seed(seed, 2048); 
 
     let mut tensor = HyperTensor::new(4, 100, params.discriminant.clone());
-    println!("[Topology] 4D-Tensor initialized. Capacity: 100^4 users.");
+    println!("[Topology] 4D-Tensor initialized.");
 
     let user_ids = vec!["Alice_001", "Bob_002", "Charlie_003"];
 
     for uid in user_ids {
         let p = match hash_to_prime(uid, 64) {
             Ok(prime) => prime,
-            Err(e) => {
-                eprintln!("⚠️  Skipping user {}: {}", uid, e);
-                continue;
-            }
+            Err(e) => { eprintln!("⚠️  Skipping {}: {}", uid, e); continue; }
         };
         
         let tuple = AffineTuple {
@@ -33,20 +30,15 @@ fn main() {
             q_shift: crate::core::algebra::ClassGroupElement::identity(&params.discriminant), 
         };
 
-        // [FIX]: Handle Collision Error Gracefully
+        // [FIX]: Handle Collision Error
         match tensor.insert_by_id(uid, tuple) {
-            Ok(_) => println!("[Ingest] User {} mapped to Prime {}...", uid, p.to_string_radix(16)),
+            Ok(_) => println!("[Ingest] User {} mapped...", uid),
             Err(e) => eprintln!("❌ Insert Failed: {}", e),
         }
     }
 
-    println!("[Compute] Folding dimensions (with pruning)...");
-    let start = std::time::Instant::now();
-    
-    // Placeholder for global root calc (since caching logic is read-only safe)
+    println!("[Compute] Folding dimensions...");
+    // Fallback: Use Identity as placeholder for demo since we focused on service fixes
     let global_root = crate::core::affine::AffineTuple::identity(&params.discriminant); 
-
-    let duration = start.elapsed();
-    println!("[Success] Global Root Calculated in {:?}", duration);
-    println!("Root P-Factor: {:x}...", global_root.p_factor);
+    println!("[Success] Global Root Placeholder: {:x}...", global_root.p_factor);
 }
