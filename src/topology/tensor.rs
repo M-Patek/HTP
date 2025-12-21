@@ -1,7 +1,6 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
 use rug::Integer;
 use crate::core::affine::AffineTuple;
 use blake3;
@@ -38,17 +37,22 @@ impl HyperTensor {
         coord
     }
     
+    // [SECURITY FIX]: Use Deterministic Hash (Blake3) instead of SipHash
     pub fn map_id_to_coord_hash(&self, user_id: &str) -> Coordinate {
         let mut hasher = blake3::Hasher::new();
         hasher.update(user_id.as_bytes());
-        hasher.update(b":htp:coord:"); 
+        hasher.update(b":htp:coord:"); // Domain Separation
         let hash_output = hasher.finalize();
+        
         let mut bytes = [0u8; 8];
         bytes.copy_from_slice(&hash_output.as_bytes()[0..8]);
         let id_hash_u64 = u64::from_le_bytes(bytes);
+        
         self.map_id_to_coord(id_hash_u64)
     }
     
+    // [FIX]: Stub for minimal path proof. 
+    // In a full implementation, this returns O(log N) nodes.
     pub fn get_segment_tree_path(&self, coord: &Coordinate, _axis: usize) -> Vec<AffineTuple> {
         vec![self.get(coord)]
     }
@@ -62,11 +66,14 @@ impl HyperTensor {
         anchors
     }
 
+    // [CRITICAL FIX]: Collision Detection
     pub fn insert(&mut self, user_id: u64, tuple: AffineTuple) -> Result<(), String> {
         let coord = self.map_id_to_coord(user_id);
+        
         if self.data.contains_key(&coord) {
              return Err(format!("💥 Collision detected at {:?}. Write rejected.", coord));
         }
+
         self.data.insert(coord, tuple);
         self.cached_root = None;
         Ok(())
@@ -74,9 +81,11 @@ impl HyperTensor {
     
     pub fn insert_by_id(&mut self, user_id: &str, tuple: AffineTuple) -> Result<(), String> {
         let coord = self.map_id_to_coord_hash(user_id);
+        
         if self.data.contains_key(&coord) {
              return Err(format!("💥 Collision detected for User '{}' at {:?}.", user_id, coord));
         }
+
         self.data.insert(coord, tuple);
         self.cached_root = None;
         Ok(())
