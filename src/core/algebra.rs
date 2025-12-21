@@ -65,7 +65,7 @@ impl ClassGroupElement {
         let (g1, v1, _v2) = Self::xgcd_primitive(a1, a2);
         
         // In a full implementation, check if g1 divides m. 
-        // For prime Discriminants (which PHTP uses), simplifications apply.
+        // For prime Discriminants (which HTP uses), simplifications apply.
         
         // Step 3: THE MAGIC - Partial Euclidean Reduction
         // Instead of multiplying full values, we reduce bounds relative to Delta.
