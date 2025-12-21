@@ -17,13 +17,12 @@ impl AffineTuple {
         }
     }
 
-    /// [SECURITY FIX]: Return Result, Check Limits
     pub fn compose(&self, other: &Self, discriminant: &Integer) -> Result<Self, String> {
-        // [SECURITY FIX]: Resource Exhaustion / OOM Protection
-        // Check if P-factor grows too large (e.g. > 100MB representation)
+        // [SECURITY FIX]: 限制 P-factor 大小为 4096 bits (常规 RSA 级别)
+        // 防止 CPU DoS 和 存储桶堵塞攻击的先决条件
         let p_bits = self.p_factor.significant_bits() + other.p_factor.significant_bits();
-        if p_bits > 1024 * 1024 * 800 { 
-             return Err("❌ Security Halt: Affine P-Factor exceeded safety limit (State Bloat Detected).".to_string());
+        if p_bits > 4096 { 
+             return Err(format!("❌ Security Halt: Affine P-Factor size ({} bits) exceeds safety limit (4096).", p_bits));
         }
 
         let new_p = Integer::from(&self.p_factor * &other.p_factor);
