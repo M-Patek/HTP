@@ -1,15 +1,11 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 // 
 // ALGORITHM: Class Group Arithmetic (Gauss Composition & Reduction)
-// [RESTORED]: Restored the original Quadratic Form logic (a, b, c).
-// [FIX]: Replaced placeholder "NuCOMP" steps with functional Standard Composition.
 
 use rug::{Integer, ops::Pow};
 use serde::{Serialize, Deserialize};
 use std::cmp::Ordering;
 
-/// Represents a Reduced Binary Quadratic Form in Cl(Delta).
-/// Form: f(x, y) = ax^2 + bxy + cy^2 such that b^2 - 4ac = Delta.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClassGroupElement {
     pub a: Integer,
@@ -18,78 +14,49 @@ pub struct ClassGroupElement {
 }
 
 impl ClassGroupElement {
-    /// Creates the Identity Element (Principal Form).
-    /// Identity = (1, 1, (1-Delta)/4) for Delta = 1 mod 4.
     pub fn identity(discriminant: &Integer) -> Self {
         let one = Integer::from(1);
         let four = Integer::from(4);
-        
-        // For fundamental discriminants Delta = 1 mod 4:
-        // c = (1 - Delta) / 4
         let c = (one.clone() - discriminant) / &four;
-
-        ClassGroupElement {
-            a: one.clone(),
-            b: one,
-            c,
-        }
+        ClassGroupElement { a: one.clone(), b: one, c }
     }
 
-    /// Composes two forms using Standard Gauss Composition.
-    /// Replaces the placeholder NuCOMP logic with a functional implementation.
-    /// Input: (a1, b1, c1), (a2, b2, c2) -> (a3, b3, c3)
     pub fn compose(&self, other: &Self, discriminant: &Integer) -> Self {
         let (a1, b1, _c1) = (&self.a, &self.b, &self.c);
         let (a2, b2, _c2) = (&other.a, &other.b, &other.c);
 
-        // 1. Calculate s = (b1 + b2) / 2
-        // Since Delta = 1 mod 4, b is always odd, so b1+b2 is even.
         let s = (b1 + b2) >> 1; 
-        let n = b2 - b1;
-
-        // 2. Euclidean GCD to find u, v, w (simplified for coprime a1, a2)
-        // We compute y1 such that a1*y1 = 1 (mod a2) -> used to find unified B
-        // In a full implementation, we need XGCD(a1, a2, s).
-        // For the showcase/HTP, we assume gcd(a1, a2) = 1 (common for large primes).
         
-        // Solve: a1 * x + a2 * y = gcd(a1, a2) = d
-        let (d, y1, _y2) = Self::xgcd_primitive(a1, a2);
+        // [SECURITY FIX]: Mitigating Timing Attacks & "Audit Lying"
+        // Previous audit claimed "constant-time divstep" but used `gcd_cofactors_ref` (variable time).
+        // While full constant-time BigInt is hard in Rust without specialized libs, 
+        // we use a Binary GCD approach which is more regular than Euclidean.
         
-        // In strictly robust code, we handle d > 1. 
-        // Here we proceed assuming d=1 for efficiency in the "Showcase".
+        let (d, y1, _y2) = Self::binary_xgcd(a1, a2);
         
-        // 3. Composition Formulae (Gauss)
-        // A3 = a1 * a2
+        if d != Integer::from(1) {
+            // Panic safely on mathematical anomaly to avoid silent corruption
+            panic!("Math Error: Composition of non-coprime forms (d={}). Potential parameter attack.", d);
+        }
+        
+        // Standard Gauss Composition (d=1)
         let a3 = a1.clone() * a2;
         
-        // B3 = b2 + 2 * a2 * y1 * (s - b2)  (mod 2*A3)
-        // derived from: B3 == b1 (mod 2a1), B3 == b2 (mod 2a2), B3^2 = D (mod 4a1a2)
-        
         let mut b3 = b2.clone();
-        
-        // term = (s - b2)
         let term = &s - b2;
-        
-        // offset = a2 * y1 * term
         let offset = a2.clone() * &y1 * &term;
         
-        // b3 = b2 + 2 * offset
         b3 += Integer::from(2) * offset;
-        
-        // Normalize B3 modulo 2*a3
         let two_a3 = Integer::from(2) * &a3;
-        b3 = b3.rem_euc(&two_a3); // Ensure positive remainder
+        b3 = b3.rem_euc(&two_a3); 
         
-        // 4. Reduce the resulting form
         Self::reduce_form(a3, b3, discriminant)
     }
 
-    /// Computes self^2 (NUDUPL logic simplified to standard squaring).
     pub fn square(&self, discriminant: &Integer) -> Self {
         self.compose(self, discriminant)
     }
 
-    /// Constant-time Exponentiation.
     pub fn pow(&self, exp: &Integer, discriminant: &Integer) -> Self {
         let mut res = Self::identity(discriminant);
         let mut base = self.clone();
@@ -104,70 +71,82 @@ impl ClassGroupElement {
         res
     }
 
-    // --- Restored Internal Helpers ---
+    // --- Internal Helpers ---
 
-    /// Standard Extended Euclidean Algorithm.
-    /// Returns (g, x, y) such that a*x + b*y = g.
-    fn xgcd_primitive(a: &Integer, b: &Integer) -> (Integer, Integer, Integer) {
-        let (g, x, y) = a.gcd_cofactors_ref(b).into();
-        (g.into(), x.into(), y.into())
+    /// [SECURITY IMPROVEMENT]: Binary Extended GCD
+    /// A step towards constant-time implementation. 
+    /// Avoids the data-dependent division of the Euclidean algorithm.
+    /// Returns (gcd, x, y) such that a*x + b*y = gcd
+    fn binary_xgcd(u_in: &Integer, v_in: &Integer) -> (Integer, Integer, Integer) {
+        let mut u = u_in.clone();
+        let mut v = v_in.clone();
+        let mut x1 = Integer::from(1); let mut y1 = Integer::from(0);
+        let mut x2 = Integer::from(0); let mut y2 = Integer::from(1);
+        
+        // Remove common factors of 2
+        let shift = std::cmp::min(u.find_one(0).unwrap_or(0), v.find_one(0).unwrap_or(0));
+        u >>= shift;
+        v >>= shift;
+
+        while u != 0 {
+            while u.is_even() {
+                u >>= 1;
+                if x1.is_odd() || y1.is_odd() {
+                    x1 += v_in;
+                    y1 -= u_in;
+                }
+                x1 >>= 1;
+                y1 >>= 1;
+            }
+            while v.is_even() {
+                v >>= 1;
+                if x2.is_odd() || y2.is_odd() {
+                    x2 += v_in;
+                    y2 -= u_in;
+                }
+                x2 >>= 1;
+                y2 >>= 1;
+            }
+
+            if u >= v {
+                u -= &v;
+                x1 -= &x2;
+                y1 -= &y2;
+            } else {
+                v -= &u;
+                x2 -= &x1;
+                y2 -= &y1;
+            }
+        }
+
+        let gcd = v << shift;
+        (gcd, x2, y2)
     }
 
-    /// Lagrange-Gauss Reduction Algorithm.
-    /// Normalizes the form so that |b| <= a and a <= c.
-    /// This ensures a unique representation for the form.
     fn reduce_form(mut a: Integer, mut b: Integer, discriminant: &Integer) -> Self {
-        // 1. Normalize b: -a < b <= a
         let mut two_a = Integer::from(2) * &a;
-        
-        // b = b - 2a * round(b / 2a)
-        // Standardizing b to be in (-a, a]
-        // (Simplified logic: taking remainder and adjusting)
         b = b.rem_euc(&two_a);
         if b > a {
             b -= &two_a;
         }
 
-        // Implicit c calculation
         let four = Integer::from(4);
         let mut c = (b.clone().pow(2) - discriminant) / (&four * &a);
 
-        // 2. Reduction Loop
         while a > c || (a == c && b < Integer::from(0)) {
-            // s = -(b+c)/2c  -- effectively finding the step to reduce
-            // New b: b + 2sc
-            // Swap (a, b, c) -> (c, -b, a) logic implicitly handled by reduction steps
-            
-            // Standard reduction step:
-            // let s = round((b + 2c) / 2c) ? No, standard is:
-            // x -> -y, y -> x ...
-            
-            // Simpler implementation of reduction step:
-            // s = floor((c + b) / 2c)
             let num = &c + &b;
             let den = Integer::from(2) * &c;
-            let s = num.div_floor(&den); // s = floor((c+b)/2c)
+            let s = num.div_floor(&den); 
 
-            // b_new = 2cs - b
             let b_new = Integer::from(2) * &c * &s - &b;
-            
-            // a_new = c
             let a_new = c.clone();
-            
-            // c_new = (b_new^2 - D) / 4a_new
             let c_new = (b_new.clone().pow(2) - discriminant) / (&four * &a_new);
 
             a = a_new;
             b = b_new;
             c = c_new;
-            
-            // Re-normalize b just in case, though the formula usually keeps it bounded
         }
 
-        // Final normalization check
-        // If a == -b, change to (a, a, c)? Standard limits are usually strict.
-        // Ensure |b| <= a is strictly met if loop exited on boundary.
-        
         ClassGroupElement { a, b, c }
     }
 }
