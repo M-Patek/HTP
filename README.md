@@ -25,19 +25,28 @@ HTP operates on the ideal class group $Cl(\Delta)$ where $\Delta \equiv 1 \pmod 
 
 ### 1. Non-Commutative Evolution
 State evolution is order-sensitive, embedding "Time" directly into the algebraic structure:
+
 $$
-T_{next} = (T_{prev}^{P_{agent}} \cdot G^{H(depth)}) \pmod \Delta
+T_{\text{next}} = (T_{\text{prev}}^{P_{\text{agent}}} \cdot G^{H(\text{depth})}) \pmod \Delta
 $$
 
 ### 2. Affine Tuple & Composition
 We encapsulate operations into Affine Tuples $\mathcal{A} = (P, Q)$. 
+
 * **Identity Element:** For sparse tensor cells (empty nodes), we use the Identity Tuple:
-  $$\mathcal{A}_{id} = (1, \mathbf{1}_{Cl(\Delta)})$$
+
+$$
+\mathcal{A}_{\text{id}} = (1, \mathbf{1}_{Cl(\Delta)})
+$$
+
   Where $\mathbf{1}_{Cl(\Delta)}$ is the Principal Form $(1, 1, \frac{1-\Delta}{4})$.
 
 * **Composition Law:**
   Two consecutive operations $\mathcal{A}_1$ and $\mathcal{A}_2$ are composed via:
-  $$\mathcal{A}_{merge} = \mathcal{A}_1 \oplus \mathcal{A}_2 = (P_1 \cdot P_2, \quad Q_1^{P_2} \cdot Q_2)$$
+
+$$
+\mathcal{A}_{\text{merge}} = \mathcal{A}_1 \oplus \mathcal{A}_2 = (P_1 \cdot P_2, \quad Q_1^{P_2} \cdot Q_2)
+$$
 
 ---
 
@@ -50,7 +59,10 @@ Verification utilizes a **Holographic Projection** mechanism. To verify a point 
 1.  **Primary Path:** An Affine Segment Tree path along a randomly challenged axis (e.g., Y-axis).
 2.  **Orthogonal Anchors:** Root hashes of the intersecting dimensions (X, Z, W).
 3.  **Consistency Check:**
-    $$\text{Fold}_y(\text{Slice}_y) \equiv \text{GlobalRoot}$$
+
+$$
+\text{Fold}_y(\text{Slice}_y) \equiv \text{GlobalRoot}
+$$
 
 ---
 
