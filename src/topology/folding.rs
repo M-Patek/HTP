@@ -5,8 +5,8 @@ use crate::core::affine::AffineTuple;
 use std::collections::HashSet;
 
 impl HyperTensor {
-    /// Computes the Global Root of the Hyper-Tensor.
-    /// [FIX]: Returns Result to handle calculation errors.
+    /// Computes the Global Root.
+    /// [FIX]: Returns Result to handle calculation errors instead of panic.
     pub fn calculate_global_root(&mut self) -> Result<AffineTuple, String> {
         if let Some(ref root) = self.cached_root {
             return Ok(root.clone());
@@ -18,9 +18,10 @@ impl HyperTensor {
         Ok(root)
     }
 
+    /// Read-only calculation suitable for concurrent readers.
     pub fn compute_root_internal(&self) -> Result<AffineTuple, String> {
+        // [PERF FIX]: Use Active Prefix Cache for O(1) pruning lookup
         let active_prefixes = self.build_active_prefixes();
-        // Start recursion
         self.fold_recursive(0, vec![], &active_prefixes)
     }
 
@@ -44,11 +45,12 @@ impl HyperTensor {
             return Ok(self.get(&fixed_coords));
         }
 
-        // [FIX]: Recursion Depth Check (Simple safeguard)
+        // [SECURITY FIX]: Recursion Depth Limit
         if current_dim > 20 { 
             return Err("Recursion limit exceeded".to_string());
         }
 
+        // [PERF FIX]: O(1) Pruning
         if !fixed_coords.is_empty() && !active_prefixes.contains(&fixed_coords) {
              return Ok(AffineTuple::identity(&self.discriminant));
         }
@@ -61,7 +63,7 @@ impl HyperTensor {
 
             if active_prefixes.contains(&next_coords) {
                 let sub_result = self.fold_recursive(current_dim + 1, next_coords, active_prefixes)?;
-                // [FIX]: Handle Result from compose
+                // [FIX]: Propagate errors from composition
                 layer_agg = layer_agg.compose(&sub_result, &self.discriminant)?;
             }
         }
