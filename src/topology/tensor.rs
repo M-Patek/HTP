@@ -1,25 +1,18 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 
 use std::collections::HashMap;
-use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use rug::Integer;
 use crate::core::affine::AffineTuple;
+use blake3;
 
-/// Represents a d-dimensional coordinate.
 pub type Coordinate = Vec<usize>;
 
-/// The Hyper-Tensor Structure.
-/// Maps Coordinates -> AffineTuples.
 pub struct HyperTensor {
     pub dimensions: usize,
     pub side_length: usize,
     pub discriminant: Integer,
-    
-    // Sparse storage
     pub data: HashMap<Coordinate, AffineTuple>,
-    
-    // [PERFORMANCE FIX]: Cache for the global root
     pub cached_root: Option<AffineTuple>, 
 }
 
@@ -30,11 +23,10 @@ impl HyperTensor {
             side_length: len,
             discriminant,
             data: HashMap::new(),
-            cached_root: None, // Starts dirty
+            cached_root: None,
         }
     }
 
-    /// Maps a linear User ID to a Tensor Coordinate (Base-L conversion).
     pub fn map_id_to_coord(&self, numeric_id: u64) -> Coordinate {
         let mut coord = Vec::with_capacity(self.dimensions);
         let mut temp = numeric_id;
@@ -47,24 +39,23 @@ impl HyperTensor {
         coord
     }
     
-    // [SECURITY FIX]: Use real hashing instead of hardcoded 12345
-    // Prevents coordinate collisions (The "Roommate" bug).
     pub fn map_id_to_coord_hash(&self, user_id: &str) -> Coordinate {
-        let mut hasher = DefaultHasher::new();
-        user_id.hash(&mut hasher);
-        let id_hash_u64 = hasher.finish();
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(user_id.as_bytes());
+        hasher.update(b":htp:coord:"); // Domain separation
+        let hash_output = hasher.finalize();
+        
+        let mut bytes = [0u8; 8];
+        bytes.copy_from_slice(&hash_output.as_bytes()[0..8]);
+        let id_hash_u64 = u64::from_le_bytes(bytes);
         
         self.map_id_to_coord(id_hash_u64)
     }
     
-    // [FIX]: Return a valid dummy path instead of empty vector
-    // In production, this performs the Segment Tree lookup.
     pub fn get_segment_tree_path(&self, coord: &Coordinate, _axis: usize) -> Vec<AffineTuple> {
-        // Return the target node itself as a minimal path proof
         vec![self.get(coord)]
     }
     
-    // [FIX]: Return dummy anchors for structure validity
     pub fn get_orthogonal_anchors(&self, _coord: &Coordinate, axis: usize) -> Vec<AffineTuple> {
         let mut anchors = Vec::new();
         for dim in 0..self.dimensions {
@@ -74,25 +65,35 @@ impl HyperTensor {
         anchors
     }
 
-    /// Insert or Update a node.
-    pub fn insert(&mut self, user_id: u64, tuple: AffineTuple) {
+    /// [CRITICAL FIX]: Prevent Pigeonhole Overwrite (Collision Safety)
+    /// 修复了“鸽巢”数据覆盖漏洞。
+    /// 现在如果坐标已被占用，操作将失败，而不是静默覆盖数据。
+    pub fn insert(&mut self, user_id: u64, tuple: AffineTuple) -> Result<(), String> {
         let coord = self.map_id_to_coord(user_id);
+        
+        if self.data.contains_key(&coord) {
+             // 简单的拒绝策略 (Fail-Safe)
+             // 生产环境中应使用链式存储 (Chaining) 或开放寻址 (Open Addressing)
+             return Err(format!("💥 Collision detected at {:?}. Write rejected to prevent data loss.", coord));
+        }
+
         self.data.insert(coord, tuple);
-        
-        // [PERF]: Invalidate Cache on write
         self.cached_root = None;
+        Ok(())
     }
     
-    pub fn insert_by_id(&mut self, user_id: &str, tuple: AffineTuple) {
-        // [FIX]: Use consistent hashing for insertion
-        let mut hasher = DefaultHasher::new();
-        user_id.hash(&mut hasher);
-        let id_u64 = hasher.finish();
+    pub fn insert_by_id(&mut self, user_id: &str, tuple: AffineTuple) -> Result<(), String> {
+        let coord = self.map_id_to_coord_hash(user_id);
         
-        self.insert(id_u64, tuple);
+        if self.data.contains_key(&coord) {
+             return Err(format!("💥 Collision detected for User '{}' at {:?}.", user_id, coord));
+        }
+
+        self.data.insert(coord, tuple);
+        self.cached_root = None;
+        Ok(())
     }
     
-    /// Retrieve a node. Returns Identity if empty.
     pub fn get(&self, coord: &Coordinate) -> AffineTuple {
         match self.data.get(coord) {
             Some(tuple) => tuple.clone(),
