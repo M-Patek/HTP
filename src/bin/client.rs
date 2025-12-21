@@ -1,12 +1,12 @@
 // src/bin/client.rs
 use clap::{Parser, Subcommand};
 use log::{info, error};
-use phtp_core::net::transport::QuicTransport;
-use phtp_core::net::wire::{PhtpRequest, PhtpResponse};
+use htp_core::net::transport::QuicTransport;
+use htp_core::net::wire::{HtpRequest, HtpResponse};
 use bincode;
 
 #[derive(Parser)]
-#[command(name = "PHTP CLI")]
+#[command(name = "HTP CLI")]
 struct Cli {
     #[arg(short, long, default_value = "127.0.0.1:4433")]
     server: String,
@@ -35,17 +35,17 @@ async fn main() -> anyhow::Result<()> {
     let endpoint = transport.get_endpoint();
     let server_addr: std::net::SocketAddr = cli.server.parse()?;
     
-    info!("🔌 Connecting to PHTP Node at {}...", server_addr);
+    info!("🔌 Connecting to HTP Node at {}...", server_addr);
     let connection = endpoint.connect(server_addr, "localhost")?.await?;
     let (mut send, mut recv) = connection.open_bi().await?;
 
     // 2. Send Request
     let request = match &cli.command {
-        Commands::Verify { user_id } => PhtpRequest::GetProof { 
+        Commands::Verify { user_id } => HtpRequest::GetProof { 
             user_id: user_id.clone(), 
             request_id: 1 
         },
-        Commands::Root => PhtpRequest::GetGlobalRoot,
+        Commands::Root => HtpRequest::GetGlobalRoot,
     };
 
     let req_bytes = bincode::serialize(&request)?;
@@ -55,10 +55,10 @@ async fn main() -> anyhow::Result<()> {
     // 3. Handle Response
     let mut buf = vec![0u8; 8192];
     let len = recv.read(&mut buf).await?.unwrap_or(0);
-    let response: PhtpResponse = bincode::deserialize(&buf[..len])?;
+    let response: HtpResponse = bincode::deserialize(&buf[..len])?;
 
     match response {
-        PhtpResponse::ProofBundle { target_coord, primary_path, orthogonal_anchors, .. } => {
+        HtpResponse::ProofBundle { target_coord, primary_path, orthogonal_anchors, .. } => {
             info!("📦 Received Proof Bundle.");
             info!("   Target Coordinate: {:?}", target_coord);
             
@@ -74,10 +74,10 @@ async fn main() -> anyhow::Result<()> {
                 error!("❌ VERIFICATION FAILED: Mathematical mismatch.");
             }
         },
-        PhtpResponse::GlobalRoot(root) => {
+        HtpResponse::GlobalRoot(root) => {
             println!("🌳 Global Root Hash: {:x}", root.p_factor);
         },
-        PhtpResponse::Error(e) => error!("Server Error: {}", e),
+        HtpResponse::Error(e) => error!("Server Error: {}", e),
     }
 
     Ok(())
