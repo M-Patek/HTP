@@ -1,7 +1,8 @@
 # Hyper-Tensor Protocol (HTP)
+
 > **A High-Dimensional, Non-Commutative Cryptographic Accumulator for Fine-Grained Membership Proofs.**
 
-Hyper-Tensor Protocol (HTP) 是下一代分布式隐私成员证明协议。它利用 **类群 (Class Groups)** 的无信任设置特性与 **超张量 (Hyper-Tensor)** 拓扑结构，将线性累加器的计算复杂度降维打击，实现了在海量数据集下的 $O(\log N)$ 验证速度与恒定大小的带宽消耗。
+**Hyper-Tensor Protocol (HTP)** 是下一代分布式隐私成员证明协议。它利用 **类群 (Class Groups)** 的无信任设置特性与 **超张量 (Hyper-Tensor)** 拓扑结构，将线性累加器的计算复杂度降维打击，实现了在海量数据集下的 $O(\log N)$ 验证速度与恒定大小的带宽消耗。
 
 ---
 
@@ -20,12 +21,14 @@ Hyper-Tensor Protocol (HTP) 是下一代分布式隐私成员证明协议。它�
 ### 1. 底层群结构
 协议运行在判别式为 $\Delta$ 的理想类群 $Cl(\Delta)$ 上，其中：
 * $\Delta = -M$，且 $M \equiv 3 \pmod 4$。
-* $\Delta$ 由公开的不可预测随机源（如区块哈希）生成，保证 **Unknown Order**。
+* $\Delta$ 由公开的不可预测随机源（如区块哈希）生成，保证 Unknown Order。
 
 ### 2. 非交换演化公式 (The Non-Commutative Evolution)
-不同于传统的交换律累加器，PHTP 引入了深度因子 $H(depth)$，使得操作顺序不可交换。状态 $T$ 的演化遵循**仿射变换 (Affine Transformation)**：
+不同于传统的交换律累加器，HTP 引入了深度因子 $H(depth)$，使得操作顺序不可交换。状态 $T$ 的演化遵循仿射变换 (Affine Transformation)：
 
-$$T_{next} = (T_{prev}^{P_{agent}} \cdot G^{H(depth)}) \pmod \Delta$$
+$$
+T_{next} = (T_{prev}^{P_{agent}} \cdot G^{H(depth)}) \pmod \Delta
+$$
 
 其中：
 * $P_{agent}$: 成员身份映射的大素数 (通过 Hash-to-Prime 生成)。
@@ -33,9 +36,17 @@ $$T_{next} = (T_{prev}^{P_{agent}} \cdot G^{H(depth)}) \pmod \Delta$$
 * $H(depth)$: 当前时空深度的哈希值。
 
 ### 3. 仿射元组与合成 (Affine Composition)
-为了加速计算，我们将单步操作封装为元组 $\mathcal{A} = (P, Q)$。两个连续操作的合成法则 $\oplus$ 定义为：
+为了加速计算，我们将单步操作封装为元组 $\mathcal{A} = (P, Q)$。
 
-$$\mathcal{A}_{merge} = \mathcal{A}_1 \oplus \mathcal{A}_2 = (P_1 \cdot P_2, \quad Q_1^{P_2} \cdot Q_2)$$
+* **单位元 (Identity Tuple):** 对于稀疏计算中的空节点，我们使用单位仿射元组 $\mathcal{A}_{id} = (1, \mathbf{1}_{Cl(\Delta)})$。
+    * 其中 $\mathbf{1}_{Cl(\Delta)}$ 是类群的主型 (Principal Form)。
+    * 当 $\Delta \equiv 1 \pmod 4$ 时，$\mathbf{1}_{Cl(\Delta)} = (1, 1, \frac{1-\Delta}{4})$。
+
+两个连续操作的合成法则 $\oplus$ 定义为：
+
+$$
+\mathcal{A}_{merge} = \mathcal{A}_1 \oplus \mathcal{A}_2 = (P_1 \cdot P_2, \quad Q_1^{P_2} \cdot Q_2)
+$$
 
 这使得我们可以构建 **线段树 (Segment Tree)**，在 $O(\log N)$ 时间内计算任意历史区间的聚合状态。
 
@@ -43,12 +54,12 @@ $$\mathcal{A}_{merge} = \mathcal{A}_1 \oplus \mathcal{A}_2 = (P_1 \cdot P_2, \qu
 
 ## 🧊 架构设计：超张量网络 (The Hyper-Tensor Topology)
 
-PHTP 摒弃了传统的线性链表，将数据映射到一个 $d$ 维超立方体 (Hypercube) 中。
+HTP 摒弃了传统的线性链表，将数据映射到一个 $d$ 维超立方体 (Hypercube) 中。
 
 ### 拓扑结构
-* **维度 (Dimension):** $d$ (例如 4 维)。
+* **维度 (Dimension):** $d$ (例如 4维)。
 * **映射:** 用户 ID 通过自然序数映射 (Base-L Conversion) 转换为坐标向量 $\vec{v} = (x, y, z, w)$。
-* **稀疏计算:** 仅对活跃节点进行计算，空节点视为单位元 $(1, 1)$。
+* **稀疏计算:** 仅对活跃节点进行计算，空节点视为单位仿射元组 $(1, \mathbf{1}_{Cl(\Delta)})$，即不做任何变换。
 
 ### 维度审讯 (Dimensional Interrogation)
 验证过程采用 Fiat-Shamir 变换实现的非交互式挑战：
@@ -65,22 +76,22 @@ PHTP 摒弃了传统的线性链表，将数据映射到一个 $d$ 维超立方�
 * **Antic** (Algebraic Number Theory in C)
 * **Chia VDF** (for optimized NuCOMP implementation)
 
-### 伪代码示例 (Python)
+### 伪代码示例
 
 ```python
 from phtp.core import ClassGroup, AffineTuple
 from phtp.topology import HyperTensor
 
 # 1. 初始化 4维张量网络
+# 使用公开随机源生成 Discriminant
 tensor = HyperTensor(dimensions=4, size=100) # 容纳 100^4 = 1亿用户
 
 # 2. 注册新成员 (自动生成素数 P 和时空因子 G)
 user_id = "user_12345"
 proof_ticket = tensor.add_member(user_id)
-
 # proof_ticket 包含:
 # - Coordinate: [12, 45, 0, 0]
-# - Prime: P_user
+# - Prime: P_user (Mapped via BLAKE3)
 # - Local Witness: W_local
 
 # 3. 生成全息证明 (针对 Z 轴)
@@ -103,6 +114,8 @@ print(f"Verification Result: {is_valid}")
 
 ## 🛡️ 安全性分级 (Security Tiers)
 
+HTP 提供可配置的验证强度，以适应不同的商业场景：
+
 | 等级 | 验证模式 | 适用场景 | 耗时 | 安全性 |
 | :--- | :--- | :--- | :--- | :--- |
 | **Silver** | 单维度随机抽样 | IoT 门禁、票务核销 | < 10ms | High |
@@ -112,7 +125,8 @@ print(f"Verification Result: {is_valid}")
 ---
 
 ## ⚡ 性能基准 (Benchmarks)
-*基于 AMD EPYC 7763 @ 3.2GHz (单核验证):*
+
+基于 AMD EPYC 7763 @ 3.2GHz (单核验证):
 
 * **Hash-to-Prime (with sieve):** 0.8ms
 * **Affine Composition (NuCOMP):** 35μs
@@ -122,11 +136,14 @@ print(f"Verification Result: {is_valid}")
 ---
 
 ## 🔮 Roadmap
+
 - [x] **Phase 1:** 原型设计，非交换代数验证。
 - [ ] **Phase 2:** 引入 NuCOMP 算法，优化 C++ 底层实现。
 - [ ] **Phase 3:** 实现分布式 Prover 网络与 GPU 并行加速。
 - [ ] **Phase 4:** 发布 Python 与 Rust SDK。
 
 ---
-**License**
-MIT License. Copyright (c) 2025 M-Patek.
+
+## License
+
+MIT License. Copyright (c) 2025.
