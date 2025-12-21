@@ -1,4 +1,4 @@
-// COPYRIGHT (C) 2025 PHOENIX PROJECT. ALL RIGHTS RESERVED.
+// COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 
 use super::algebra::ClassGroupElement;
 use rug::Integer;
