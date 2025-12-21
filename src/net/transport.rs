@@ -9,7 +9,7 @@ use quinn::{Endpoint, ServerConfig, ClientConfig};
 use std::net::SocketAddr;
 use std::error::Error;
 
-/// The PHTP Transport Engine.
+/// The HTP Transport Engine.
 /// Handles connection pooling and stream multiplexing.
 pub struct QuicTransport {
     endpoint: Endpoint,
