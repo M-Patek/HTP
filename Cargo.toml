@@ -1,17 +1,17 @@
 [package]
-name = "phtp-core"
+name = "htp-core"
 version = "1.0.0"
 edition = "2021"
 authors = ["M-Patek Research <architect@m-patek.io>"]
-default-run = "phtp-node"
+default-run = "htp-node"
 
 # 定义两个可执行文件
 [[bin]]
-name = "phtp-node"
+name = "htp-node"
 path = "src/bin/node.rs"
 
 [[bin]]
-name = "phtp-cli"
+name = "htp-cli"
 path = "src/bin/client.rs"
 
 [dependencies]
