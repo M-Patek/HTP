@@ -1,4 +1,4 @@
-# Hyper-Tensor Protocol: Technical Specification
+# HYPER-TENSOR PROTOCOL (HTP): Technical Specification
 
 ## 1. Mathematical Preliminaries (数学基础)
 
