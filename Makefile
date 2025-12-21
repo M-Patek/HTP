@@ -1,3 +1,4 @@
+# COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 # M-Patek Automation Script
 
 .PHONY: all build run-node verify bench audit
