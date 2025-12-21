@@ -4,10 +4,11 @@ use rug::Integer;
 use blake3::Hasher;
 
 /// 运行时生成：将任意用户 ID 转换为一个唯一的素数
-/// [SECURITY FIX]: Added loop limit to prevent infinite loops.
-pub fn hash_to_prime(user_id: &str, bit_size: u32) -> Integer {
+/// [SECURITY FIX]: Returns Result instead of Panicking.
+/// 修复了 DoS 漏洞：之前的 panic! 会导致服务器在恶意输入下崩溃。
+pub fn hash_to_prime(user_id: &str, bit_size: u32) -> Result<Integer, String> {
     let mut nonce = 0u64;
-    let max_attempts = 10_000; // Safety Limit against entropy exhaustion
+    let max_attempts = 10_000; // Safety Limit
     
     while nonce < max_attempts {
         let mut hasher = Hasher::new();
@@ -29,12 +30,12 @@ pub fn hash_to_prime(user_id: &str, bit_size: u32) -> Integer {
 
         // 2. 强素数测试
         if candidate.is_probably_prime(25) != rug::integer::IsPrime::No {
-            return candidate;
+            return Ok(candidate);
         }
 
         nonce += 1;
     }
     
-    // [Fix]: Panic safely instead of looping forever
-    panic!("❌ Failed to generate prime for '{}'. Entropy pool exhausted.", user_id);
+    // [Fix]: Return error gracefully
+    Err(format!("❌ Failed to generate prime for '{}' after {} attempts.", user_id, max_attempts))
 }
