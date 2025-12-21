@@ -1,4 +1,5 @@
-// src/bin/node.rs
+// COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
+
 use clap::Parser;
 use log::{info, warn};
 use std::sync::Arc;
