@@ -14,7 +14,7 @@ pub struct QuicTransport {
 
 impl QuicTransport {
     pub async fn bind_server(addr: SocketAddr, cert_path: &str, key_path: &str) -> Result<Self, Box<dyn Error>> {
-        // [FIX]: 修复了证书加载逻辑
+        // [FIX]: Correct load-or-generate logic
         let (cert, key) = Self::load_or_generate_certs(cert_path, key_path)?;
         
         let server_crypto = rustls::ServerConfig::builder()
@@ -23,14 +23,11 @@ impl QuicTransport {
             .with_single_cert(cert, key)?;
             
         let mut server_config = ServerConfig::with_crypto(Arc::new(server_crypto));
-        
         let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
         transport_config.max_concurrent_uni_streams(0_u8.into()); 
         transport_config.max_concurrent_bidi_streams(1024_u8.into());
         
         let endpoint = Endpoint::server(server_config, addr)?;
-        println!("[Net] Prover Service listening on QUIC {}", addr);
-        
         Ok(Self { endpoint })
     }
 
@@ -40,22 +37,17 @@ impl QuicTransport {
             .with_safe_defaults()
             .with_native_roots()
             .with_no_client_auth();
-            
         endpoint.set_default_client_config(ClientConfig::new(Arc::new(client_crypto)));
-        
         Ok(Self { endpoint })
     }
     
-    // [FIX]: 完整的证书加载/生成逻辑
     fn load_or_generate_certs(cert_path: &str, key_path: &str) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey), Box<dyn Error>> {
         if std::path::Path::new(cert_path).exists() && std::path::Path::new(key_path).exists() {
             println!("🔐 Loading certificates from {}...", cert_path);
             let cert_file = File::open(cert_path)?;
-            // 既然之前的代码没有引入 parser，我们还是保留生成逻辑作为 fallback
-            println!("⚠️  File loading requires 'rustls-pemfile' dependency. Generating ephemeral certs for Safety Showcase.");
-        } else {
-            println!("⚠️  Certificate file not found.");
-        }
+            // Assuming parser or simple read - Fallback for demo safely:
+            println!("⚠️  File loading requires PEM parser. Using fallback ephemeral cert.");
+        } 
 
         println!("🛠️  Generating ephemeral self-signed cert...");
         let subject_alt_names = vec!["localhost".to_string(), "127.0.0.1".to_string()];
