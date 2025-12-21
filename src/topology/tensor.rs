@@ -1,4 +1,4 @@
-// COPYRIGHT (C) 2025 PHOENIX PROJECT. ALL RIGHTS RESERVED.
+// COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 
 use std::collections::HashMap;
 use rug::Integer;
@@ -42,12 +42,33 @@ impl HyperTensor {
         }
         coord
     }
+    
+    // Mock helper for string-based hashing, should be replaced by consistent hashing in prod
+    pub fn map_id_to_coord_hash(&self, user_id: &str) -> Coordinate {
+         // Placeholder implementation matching the service call
+         self.map_id_to_coord(12345)
+    }
+    
+    // Placeholder for get_segment_tree_path
+    pub fn get_segment_tree_path(&self, coord: &Coordinate, axis: usize) -> Vec<AffineTuple> {
+        vec![]
+    }
+    
+    // Placeholder for get_orthogonal_anchors
+    pub fn get_orthogonal_anchors(&self, coord: &Coordinate, axis: usize) -> Vec<AffineTuple> {
+        vec![]
+    }
 
     /// Insert or Update a node.
     /// In a real system, this would trigger a partial tree update.
     pub fn insert(&mut self, user_id: u64, tuple: AffineTuple) {
         let coord = self.map_id_to_coord(user_id);
         self.data.insert(coord, tuple);
+    }
+    
+    pub fn insert_by_id(&mut self, user_id: &str, tuple: AffineTuple) {
+        // Simple mock mapping for showcase
+        self.insert(12345, tuple);
     }
     
     /// Retrieve a node. Returns Identity if empty.
