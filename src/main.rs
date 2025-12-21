@@ -7,7 +7,7 @@ use crate::core::affine::AffineTuple;
 use crate::topology::tensor::HyperTensor;
 
 fn main() {
-    println!("=== Phoenix Hyper-Tensor Protocol (Technical Showcase) ===");
+    println!("=== Hyper-Tensor Protocol (Technical Showcase) ===");
 
     // ---------------------------------------------------------
     // 第一步：运行时生成“宇宙参数” (Trustless Setup)
