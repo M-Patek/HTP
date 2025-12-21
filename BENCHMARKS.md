@@ -1,6 +1,6 @@
 # Performance Benchmarks
 
-All benchmarks were run on a reference workstation to validate the $O(\log N)$ scaling properties of PHTP.
+All benchmarks were run on a reference workstation to validate the $O(\log N)$ scaling properties of HTP.
 
 ## 🖥️ Test Environment
 * **CPU:** AMD EPYC 7763 (Simulated Single Core & 64-Core modes)
@@ -22,13 +22,13 @@ All benchmarks were run on a reference workstation to validate the $O(\log N)$ s
 
 ### 1. Proof Generation Time (vs RSA Accumulator)
 
-| Dataset Size | RSA Accumulator (Linear) | PHTP (Hyper-Tensor) | Improvement |
+| Dataset Size | RSA Accumulator (Linear) | HYPER-TENSOR PROTOCOL (HTP) | Improvement |
 | :--- | :--- | :--- | :--- |
 | 1,000 | 1.2 s | 0.05 s | 24x |
 | 1,000,000 | 20 mins | 0.12 s | **10,000x** |
 | 1 Billion | > 1 week | 0.18 s | **~Infinite** |
 
-> *PHTP allows purely logarithmic proof generation time due to pre-computed Segment Trees.*
+> *HTP allows purely logarithmic proof generation time due to pre-computed Segment Trees.*
 
 ### 2. Parallel Throughput (Batch Ingestion)
 
@@ -38,7 +38,7 @@ Testing the "Dimensional Folding" on multi-core setup (Ingesting 1M users):
 * **16 Cores:** 12 seconds
 * **64 Cores:** 3.5 seconds
 
-**Conclusion:** PHTP scales almost linearly with available CPU cores during the batch update phase, making it suitable for high-frequency trading environments.
+**Conclusion:** HTP scales almost linearly with available CPU cores during the batch update phase, making it suitable for high-frequency trading environments.
 
 ## 🔬 Micro-Benchmarks
 
