@@ -4,8 +4,6 @@ use std::sync::Arc;
 use quinn::{Endpoint, ServerConfig, ClientConfig};
 use std::net::SocketAddr;
 use std::error::Error;
-use std::fs::File;
-use std::io::BufReader;
 use rcgen::generate_simple_self_signed;
 
 pub struct QuicTransport {
@@ -14,7 +12,6 @@ pub struct QuicTransport {
 
 impl QuicTransport {
     pub async fn bind_server(addr: SocketAddr, cert_path: &str, key_path: &str) -> Result<Self, Box<dyn Error>> {
-        // [FIX]: Correct load-or-generate logic
         let (cert, key) = Self::load_or_generate_certs(cert_path, key_path)?;
         
         let server_crypto = rustls::ServerConfig::builder()
@@ -23,9 +20,14 @@ impl QuicTransport {
             .with_single_cert(cert, key)?;
             
         let mut server_config = ServerConfig::with_crypto(Arc::new(server_crypto));
-        let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
-        transport_config.max_concurrent_uni_streams(0_u8.into()); 
-        transport_config.max_concurrent_bidi_streams(1024_u8.into());
+        
+        // [FIX]: 安全解包，防止多线程环境下 unwrap 导致 Panic
+        if let Some(transport_config) = Arc::get_mut(&mut server_config.transport) {
+            transport_config.max_concurrent_uni_streams(0_u8.into()); 
+            transport_config.max_concurrent_bidi_streams(1024_u8.into());
+        } else {
+            return Err("Failed to configure transport: concurrent access detected.".into());
+        }
         
         let endpoint = Endpoint::server(server_config, addr)?;
         Ok(Self { endpoint })
@@ -36,17 +38,19 @@ impl QuicTransport {
         let client_crypto = rustls::ClientConfig::builder()
             .with_safe_defaults()
             .with_native_roots()
-            .with_no_client_auth();
+            .with_no_client_auth(); // 开发环境跳过验证
         endpoint.set_default_client_config(ClientConfig::new(Arc::new(client_crypto)));
         Ok(Self { endpoint })
     }
     
     fn load_or_generate_certs(cert_path: &str, key_path: &str) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey), Box<dyn Error>> {
-        if std::path::Path::new(cert_path).exists() && std::path::Path::new(key_path).exists() {
-            println!("🔐 Loading certificates from {}...", cert_path);
-            let cert_file = File::open(cert_path)?;
-            // Assuming parser or simple read - Fallback for demo safely:
-            println!("⚠️  File loading requires PEM parser. Using fallback ephemeral cert.");
+        let c_path = std::path::Path::new(cert_path);
+        let k_path = std::path::Path::new(key_path);
+
+        if c_path.exists() && k_path.exists() {
+            println!("🔐 Found certificates at {:?}. (Mocking load logic for demo)", c_path);
+            // 生产环境应使用 rustls-pemfile 加载，Demo 仍回退
+            println!("⚠️  PEM parser not linked. Generating ephemeral certs.");
         } 
 
         println!("🛠️  Generating ephemeral self-signed cert...");
