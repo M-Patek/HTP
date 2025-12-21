@@ -1,7 +1,7 @@
 // COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 //
 // MODULE: Wire Protocol
-// DESCRIPTION: Defines the compact binary serialization format for PHTP.
+// DESCRIPTION: Defines the compact binary serialization format for HTP.
 // OPTIMIZATION: Uses 'bincode' for near-memory-layout serialization speed.
 
 use serde::{Serialize, Deserialize};
@@ -14,7 +14,7 @@ pub const PROTOCOL_VERSION: u16 = 1;
 
 /// The Request sent by a Verifier (Light Client).
 #[derive(Serialize, Deserialize, Debug)]
-pub enum PhtpRequest {
+pub enum HtpRequest {
     /// "I want to verify User X."
     /// The Prover will derive the deterministic challenge axis automatically.
     GetProof {
@@ -28,7 +28,7 @@ pub enum PhtpRequest {
 
 /// The Response sent by a Prover (Full Node).
 #[derive(Serialize, Deserialize, Debug)]
-pub enum PhtpResponse {
+pub enum HtpResponse {
     /// The Holographic Proof Bundle.
     ProofBundle {
         request_id: u64,
