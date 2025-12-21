@@ -9,7 +9,7 @@ use quinn::{Endpoint, RecvStream, SendStream};
 use bincode;
 
 use crate::topology::tensor::HyperTensor;
-use crate::net::wire::{PhtpRequest, PhtpResponse};
+use crate::net::wire::{HtpRequest, HtpResponse};
 
 /// The main loop for the Prover node.
 /// Accepts incoming streams and spawns handlers.
@@ -42,10 +42,10 @@ async fn handle_stream(
     // Reads directly from the QUIC stream buffer
     let mut buf = vec![0u8; 4096];
     let len = recv.read(&mut buf).await?.unwrap_or(0);
-    let request: PhtpRequest = bincode::deserialize(&buf[..len])?;
+    let request: HtpRequest = bincode::deserialize(&buf[..len])?;
 
     let response = match request {
-        PhtpRequest::GetProof { user_id, request_id } => {
+        HtpRequest::GetProof { user_id, request_id } => {
             // [CRITICAL LOGIC]: The Fiat-Shamir Interactive Flow
             
             // A. Acquire Read Lock (Non-blocking)
@@ -68,7 +68,7 @@ async fn handle_stream(
             // E. Extract Orthogonal Anchors
             let anchors = guard.get_orthogonal_anchors(&coord, challenge_axis);
             
-            PhtpResponse::ProofBundle {
+            HtpResponse::ProofBundle {
                 request_id,
                 target_coord: coord,
                 primary_path: path,
@@ -77,9 +77,9 @@ async fn handle_stream(
             }
         },
         
-        PhtpRequest::GetGlobalRoot => {
+        HtpRequest::GetGlobalRoot => {
             let guard = tensor.read().await;
-            PhtpResponse::GlobalRoot(guard.calculate_global_root())
+            HtpResponse::GlobalRoot(guard.calculate_global_root())
         }
     };
 
