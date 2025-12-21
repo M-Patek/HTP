@@ -13,12 +13,17 @@
 
 ### 1.2 Non-Commutative Algebra (非交换代数)
 * **State Evolution (状态演化):**
-    $$S_{t} = S_{t-1}^{P_t} \cdot G^{H(t)}$$
+
+$$S_{t} = S_{t-1}^{P_t} \cdot G^{H(t)}$$
+
 * **Recursive Unrolling (递归展开推导):**
     展示 $W$ (见证人) 和 $R$ (剩余项) 如何分离：
-    $$T_n = T_{k-1}^{(\prod_{j=k}^n P_j)} \cdot \dots$$
+
+$$T_n = T_{k-1}^{(\prod_{j=k}^n P_j)} \cdot \dots$$
+
 * **Verification Equation (验证方程):**
-    $$W^{P_k} \cdot R \equiv T_{root} \pmod \Delta$$
+
+$$W^{P_k} \cdot R \equiv T_{root} \pmod \Delta$$
 
 ---
 
@@ -29,13 +34,15 @@
 
 ### 2.2 Composition Law (合成法则)
 推导 $\mathcal{A}_1$ 后接 $\mathcal{A}_2$ 的合成结果：
+
 $$\mathcal{A}_{1 \oplus 2} = (P_1 P_2, \quad Q_1^{P_2} \cdot Q_2)$$
+
 > **注意:** 强调其非交换性 (Non-commutativity)，即 $\mathcal{A}_1 \oplus \mathcal{A}_2 \neq \mathcal{A}_2 \oplus \mathcal{A}_1$。
 
 ### 2.3 Segment Tree Construction (线段树构建)
 描述如何构建一棵树：
 * **Leaf (叶子节点):** $\mathcal{A}_i = (P_i, G^{H(i)})$
-* **Node (中间节点):** $\mathcal{A}_{left} \oplus \mathcal{A}_{right}$
+* **Node (中间节点):** $\mathcal{A}_L \oplus \mathcal{A}_R$
 * **Root (根节点):** 代表整个范围的聚合变换。
 
 ---
@@ -44,18 +51,21 @@ $$\mathcal{A}_{1 \oplus 2} = (P_1 P_2, \quad Q_1^{P_2} \cdot Q_2)$$
 
 ### 3.1 Coordinate Mapping
 定义从逻辑索引 $i$ 到向量 $\vec{v}$ 的映射：
+
 $$v_k = (i // L^{k-1}) \pmod L$$
 
 ### 3.2 Dimensional Folding (维度折叠算法)
 定义张量降维函数 $\Phi$：
+
 $$\Phi(Tensor_d) \to Tensor_{d-1}$$
+
 通过在第一维度上应用线段树聚合来实现。
 
 ### 3.3 Orthogonal Anchoring (正交锚定)
 解释点 $\vec{v}$ 的“证明”组成部分：
 1.  沿 **Challenge Axis (挑战轴)** 的主路径。
 2.  在 $\vec{v}$ 处相交的正交轴的根。
-3.  **一致性检查:** $\text{Root}(\text{Axis}_1) == \text{Root}(\text{Axis}_2) == \text{GlobalRoot}$。
+3.  **一致性检查:** $Root(Axis_1) == Root(Axis_2) == GlobalRoot$。
 
 ---
 
@@ -63,6 +73,7 @@ $$\Phi(Tensor_d) \to Tensor_{d-1}$$
 
 ### 4.1 Fiat-Shamir Transformation
 定义非交互式挑战生成：
+
 $$Challenge\_Axis = Hash(Global\_Root \parallel User\_ID) \pmod d$$
 
 ### 4.2 Verification Algorithm
