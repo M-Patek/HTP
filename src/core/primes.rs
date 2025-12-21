@@ -1,4 +1,4 @@
-// COPYRIGHT (C) 2025 PHOENIX PROJECT. ALL RIGHTS RESERVED.
+// COPYRIGHT (C) 2025 M-Patek. ALL RIGHTS RESERVED.
 
 use rug::Integer;
 use blake3::Hasher;
